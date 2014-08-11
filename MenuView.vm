@@ -1,0 +1,228 @@
+#set ($canDelete = !$doc.isNew() && $xwiki.checkAccess($doc.fullName, 'delete'))
+#set ($inEditMode = $xcontext.action == 'inline' || $xcontext.action == 'edit')
+#*
+ * Creates a list of pages that have '$space.WebHome' as their parent
+ *
+ * @param space the space from which to grab the child pages from
+ *#
+#macro(spaceChildren $space)
+  #set($projects= $services.query.xwql("where doc.parent = '${space}.WebHome' AND doc.fullName <> '${space}.WebPreferences' and doc.fullName <> 'GCCS-J Systems Engineering Support Inactive Projects.WebHome' ORDER BY doc.name").execute())
+  #foreach($proj in $projects)
+    #set($projDoc = $xwiki.getDocument($proj))
+    <li><a href="$xwiki.getURL($proj)">$projDoc.displayTitle</a></li>
+  #end
+#end
+#*
+ * Sort a list of XWiki objects using an property as comparator.
+ *
+ * @param inputObjects the list of XWiki objects to sort.
+ * @param propertyName the name of the XWiki object property to sort the inputObjects by. Multiple values for the same property are allowed.
+ * @param outputObjects the list where to append the sorted objects. This list must not be null and should be empty before calling the macro.
+ *#
+#macro (sortXWikiObjectsList $inputObjects $propertyName $outputObjects)
+  #set ($objectsMap = {})
+  #foreach ($object in $inputObjects)
+    #set ($key = $object.getProperty($propertyName).value)
+    #set ($sameKeyObjects = $objectsMap.get($key))
+    #if (!$sameKeyObjects)
+      #set ($sameKeyObjects = [])
+      #set ($discard = $objectsMap.put($key, $sameKeyObjects))
+    #end
+    #set ($discard = $sameKeyObjects.add($object))
+  #end
+  #foreach ($key in $sorttool.sort($objectsMap.keySet()))
+    #set ($sameKeyObjects = $objectsMap.get($key))
+    #foreach ($sameKeyObject in $sameKeyObjects)
+      #set ($discard = $outputObjects.add($sameKeyObject))
+    #end
+  #end
+#end
+#*
+ * Get the list of MenuItems from a given document and return them in sorted order
+ *
+ * @param docName the document which contains the MenuItems.
+ * @param outputList the list where to append the sorted objects. This list must not be null and should be empty before calling the macro.
+ *#
+#macro (getListFromDoc $docName $sortedList)
+  #set ($myDoc = $xwiki.getDocument($docName))
+  #set ($assessments =$myDoc.getObjects('Navbar.MenuItemClass'))
+  #set ($myMap = {})
+    #foreach ($ass in $assessments)
+    #set ($myKey = $ass.getProperty('projectHome').getValue())
+    #set ($sameKeyObjects = $myMap.get($myKey))
+    #if (!$sameKeyObjects)
+      #set ($sameKeyObjects = [])
+      #set ($discard = $myMap.put($myKey, $sameKeyObjects))
+    #end
+    #set ($discard = $sameKeyObjects.add($ass))
+  #end
+  #sortXWikiObjectsList($assessments, 'order', $sortedList)
+#end
+
+#*
+ * Creates a dropdown menu for a program. First checks if the current user has view rights to the forum (skip this check if there is no forum setup), then checks if he/she has view rights to the program home.
+ *
+ * @param prog the display name for the program
+ * @param progHome the space name of the program
+ * @param progForum the space of the forum
+ * @param navbarPage the page which holds the ordered navbar list items
+ *#
+#macro(createDropdown $prog $progHome $progForum $navbarPage)
+  #if($xwiki.hasAccessLevel("view",$xcontext.user, "${progForum}.WebHome") || $progForum == "")
+    <li class="dropdown">
+      #if($xwiki.hasAccessLevel("view",$xcontext.user, "${progHome}.WebHome"))
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">$prog <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+          <li><a href="$xwiki.getURL("${progHome}.WebHome")">$xwiki.getDocument("${progHome}.WebHome").displayTitle</a></li>
+          <li class="divider"></li>
+          <li role="presentation" class="dropdown-header">Projects</li>
+          #set($myList = [])
+          #getListFromDoc($navbarPage $myList)
+          #foreach($item in $myList)
+            #set($itemDoc = $xwiki.getDocument($item.getProperty('projectHome').getValue()))
+            <li><a href="$xwiki.getURL($itemDoc)">$itemDoc.displayTitle</a></li>
+          #end
+          #if($progForum != "")
+            <li class="divider"></li>
+            <li><a href="$xwiki.getURL("${progForum}.WebHome")">$prog Forum</a></li>
+          #end
+        </ul>
+      #elseif($progForum != "") ## Can view forum but not program, and forum exists
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">$progForum <b class="caret"></b></a>
+        <ul class="dropdown-menu">   
+          <li><a href="$xwiki.getURL("${progForum}.WebHome")">$progHome Forum</a></li>
+          <li class="divider"></li>
+          <li role="presentation" class="dropdown-header">Topics</li>
+          #spaceChildren($progForum)
+        </ul>
+    </li>  
+    #end
+  #end
+#end
+
+#*
+ * Creates a dropdown menu for corporate users. Checks view rights to each page listed in the given navbarPage
+ *
+ * @param navbarPage the page which holds the ordered navbar list items
+ *#
+#macro(createCorporateDropdown $navbarPage)
+  #if($xwiki.hasAccessLevel("view",$xcontext.user, $navbarPage))
+    <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Corporate <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+          #set($myList = [])
+          #getListFromDoc($navbarPage $myList)
+          #foreach($item in $myList)
+            #set($itemDoc = $xwiki.getDocument($item.getProperty('projectHome').getValue()))
+            #if($xwiki.hasAccessLevel("view",$xcontext.user, $itemDoc))
+              <li><a href="$xwiki.getURL($itemDoc)">$itemDoc.displayTitle</a></li>
+            #end
+          #end
+        </ul>
+    </li>  
+  #end
+#end
+
+## Get Avatar ----------------------
+
+#set($profileDoc = $xwiki.getDocument($context.localUser))
+#set($profileObj = $profileDoc.getObject('XWiki.XWikiUsers'))
+#set($pictname = $profileObj.getProperty('avatar').value)
+#if("$!{pictname}" != '')
+  #set($picturl = $profileDoc.getAttachmentURL($pictname))
+#else
+  #set($picturl = '/bin/download/Skins/BootSkin/BSLlogoRock.png')
+#end
+#if(!$profileObj.avatar)
+#set($picturl = '/bin/download/Skins/BootSkin/BSLlogoRock.png')
+#end
+
+## Begin Navbar --------------------------
+
+<nav class="navbar navbar-default navbar-fixed-top" role="navigation" data-role="header" data-position="fixed" data-disable-page-zoom="false">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+    <a class="brand" href="/bin/view/SAMcloud/Home"><img src="/resources/bslicons/SAMcloudLogo.png" alt ="SAMcloud" id="logo" class="img-responsive pull-left" style="height: 20px;margin-top: 14px;margin-left:1em;margin-right:1em;"/></a>
+    </div>
+  </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        #createDropdown("GCCS-J" "GCCS-J Systems Engineering Support" "GCCS-J Stakeholders" "Navbar.GCCS-J")
+        #createDropdown("JOPES" "JOPES Modernization" "JOPES Stakeholders" "Navbar.JOPES")
+        #createDropdown("Shah &amp; Shah" "Shah-Shah" "" "Navbar.Shah_Shah")
+        #createCorporateDropdown($navbarPage)
+      </ul>
+      
+      ################### Navbar Right Begin ##################
+      #if(!$isGuest)
+        <ul class="nav navbar-nav navbar-right">
+          ################### User Dropdown ###########################
+          <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="padding-left:7.5px;">$xwiki.getUserName($xcontext.user, false)<b class="caret"></b></a>
+            ##<a href="#" class="dropdown-toggle" data-toggle="dropdown">Daniel Rodriguez <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="${xwiki.getURL($context.user)}">My Profile</a></li>
+              <li><a href="${xwiki.getURL($context.user, 'view', 'category=preferences')}">Preferences</a></li>
+              ## TODO: Merge SAMcloud Help with other IT spaces. This used to check for edit rights, but it gave all Forum users this dropdown option even though its meant for internal users
+              #if($hasAdmin)
+                <li><a href="$xwiki.getURL('SAMcloud Help.WebHome')">SAMcloud Help</a></li>
+                <li class="divider"></li>
+                <li><a href="$xwiki.getURL('XWiki.XWikiPreferences')">Administer SAMcloud</a></li>
+                <li><a href="$xwiki.getURL('Main.AllDocs')">Document Index</a></li>
+                <li><a href="$xwiki.getURL('SAMcloud.Program Archive')">Program Archive</a></li>
+                <li class="divider"></li>
+              #end
+              <li><a href="${xwiki.getURL($doc.fullName, 'logout')}">Logout</a></li>
+            </ul>
+          </li>
+          #if($hasCreatePage)
+            <li class="dropdown" id="plusdropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" style="padding-left:0;padding-right:0;"><i class="fa fa-plus fa-lg"></i> <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                #set($hasPreviousMenuSection = false)
+                #if ($hasCreateSpace)
+                  <li><a href="$doc.getURL('create', 'tocreate=space')">Add Space</a></li>
+                  #if($hasSpaceAdmin)
+                  <li><a href="$!xwiki.getURL("${doc.space}.WebHome", 'deletespace')">Delete Space</a></li>
+                  #end
+                  #set($hasPreviousMenuSection = true)
+                #end
+                #if($hasPreviousMenuSection)
+                  <li class="divider"></li>
+                #end
+                  <li><a href="$doc.getURL('create')">Add Page</a></li> 
+                    #if($canDelete)
+                    <li><a href="$doc.getURL('view', 'xpage=rename&amp;step=1')">Rename Page</a></li>
+                    <li><a href="$doc.getURL('view', 'xpage=copy')">Copy Page</a></li>
+                    <li><a href="$doc.getURL('delete', $!languageparams)">Delete Page</a></li>
+                    <li><a href="$doc.getURL('view', 'viewer=share')">Share Page</a></li>
+                    <li class="divider"></li>
+                    <li onclick="window.location ='/bin/inline/SAMcloud+Dev/$datetool.get('MMddyyyyHHmmss')?template=BugReporter.BugReporterTemplate&parent=Issue_Tracker.WebHome';"><a href=#>Report Issue</a></li>
+                    #end
+              </ul>
+            </li>
+          #end
+        </ul>
+        ############ Display Avatar ####################
+        <a href="${xwiki.getURL($context.user)}"><img src="$picturl" class="img-responsive pull-right" style="max-height:2.5em;margin-top:.4em;padding-left:10px"/></a>    
+        <form class="navbar-form navbar-right" role="search" action="#if($xwiki.exists('Main.Search'))$xwiki.getURL('Main.Search')#else$xwiki.getURL('Main.WebSearch')#end">
+          <div class="form-group">
+            ##<input type="text" class="form-control" placeholder="Search">
+            <input  type="text" name="text" class="search-query" class="globalsearchinput withTip" id="headerglobalsearchinput" placeholder="Search">
+          </div>
+          ##<button type="submit" class="btn btn-default">Submit</button>
+        </form>
+      #end
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>

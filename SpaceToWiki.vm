@@ -1,0 +1,51 @@
+{{velocity}}
+#if($request.action == 'moveSpace')
+  #foreach($item in $xwiki.getSpaceDocsName($request.space))
+    #set ($fromReference = $services.model.createDocumentReference("", $request.space, $item))
+    #set ($toReference = $services.model.createDocumentReference($request.wiki, $request.space, $item))
+    * Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+    #set($ok = $xwiki.getDocument($fromReference).rename($toReference))
+  #end
+#end
+
+{{html wiki='true'}}
+<form method="get" class="xform" action="$doc.getURL('view')">
+  <input type="hidden" name="action" value="moveSpace" />
+  <div>
+    <dl>
+      <dt>
+        <label>Select the Space to Move</label>
+        <span class="xHint">Choose from the list of spaces below</span>
+      </dt>
+      <dd>
+        <select size="1" name="space" style="width:auto">
+        #foreach($space in $xwiki.spaces)
+           <option value="$space" >$space</option>
+        #end
+        </select>
+      </dd>
+    </dl>
+    <dl>
+      <dt>
+        <label>Target Wiki</label>
+        <span class="xHint">Choose from the list of wikis below</span>
+      </dt>
+      <dd>
+        <select size="1" name="wiki" style="width:auto">
+        #foreach($wiki in $services.wiki.getAll())
+          #if($wiki.id != $doc.wiki)
+           <option value="$wiki.id" >$wiki.id</option>
+          #end
+        #end
+        </select>
+      </dd>
+    </dl>
+  </div>
+  <div class="buttons">
+   <span class="buttonwrapper">
+     <input type="submit" class="button" value="Move Space" />
+   </span>
+ </div>
+</form>
+{{/html}}
+{{/velocity}}

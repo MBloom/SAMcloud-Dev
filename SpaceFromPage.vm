@@ -1,0 +1,89 @@
+{{velocity}}
+= Please select from the options below =
+
+#if($request.action == 'rename')
+  ## check to see if request was accidentally sent
+  #if($request.document != "" && $request.spname != "")
+    #set ($mySpaceName = $request.spname)
+    #set ($formatedSpaceName = $mySpaceName.replaceAll("[()]","").replaceAll("[^a-zA-z0-9]", " ").replaceAll(" +","_"))
+    ## check to see if space already exists
+    #if($xwiki.getSpaces().contains($formatedSpaceName))
+      {{warning}}
+      This space you have entered alread exists. Please another another space name.
+      {{/warning}}
+    #else  
+      #set ($myDoc = $xwiki.getDocument($request.document))
+      |=Original Page |=New Page |=Title
+      ## move child pages to the new space
+      #moveChildren($myDoc.space, $formatedSpaceName, $myDoc.name)
+      ## set the parents of the first level pages to point to the new space
+      #foreach ($child in $myDoc.getChildren())
+        #set ($childPage = $xwiki.getDocument($child))
+        #set ($parentReference = $services.model.resolveDocument($childPage.parent, $childPage.documentReference))
+        #set ($ok = $childPage.setParent("${formatedSpaceName}.WebHome"))
+        #set ($ok = $childPage.save('Updated parent', true))
+      #end
+      ## rename the requested page to be WebHome of the new space
+      #set ($newMainReference = $services.model.createDocumentReference("", $formatedSpaceName, 'WebHome'))
+      | $myDoc | $newMainReference | $myDoc.title
+      #set ($myDocTitle = $myDoc.getTitle())
+      #set ($ok = $myDoc.rename($newMainReference))
+      #set ($myNewDoc = $xwiki.getDocument($newMainReference))
+      #set ($ok = $myNewDoc.setTitle($myDocTitle))
+      #set ($ok = $myNewDoc.setParent(""))
+      #set ($ok = $myNewDoc.save('Updated parent and title', true))
+    #end
+  #else
+    {{warning}}
+    No field can be left blank
+    {{/warning}}
+  #end
+#end
+
+#macro(moveChildren $space, $newSpace, $page)
+  #set ($pageReference = $services.model.createDocumentReference("", $space, $page))
+  #foreach ($child in $xwiki.getDocument($pageReference).getChildren())
+    #moveChildren($space, $newSpace, $child)
+    #set ($childPage = $xwiki.getDocument($child))
+    #set ($childName = $childPage.getName())
+    #set ($childTitle = $childPage.getTitle())
+    #set ($newReference = $services.model.createDocumentReference("", $newSpace, $childName.replaceAll("[()]","").replaceAll("[^a-zA-z0-9]", " ").replaceAll(" +","_")))
+    #set ($ok = $childPage.rename($newReference))
+    #set ($newChildPage = $xwiki.getDocument($newReference))
+    #set ($ok = $newChildPage.setTitle($childTitle))
+    | $child | $newReference | $childTitle
+    #set ($ok = $newChildPage.save('Updated title', true))
+  #end
+#end
+
+{{html wiki='true'}}
+<form method="post" class="xform">
+  <input type="hidden" name="action" value="rename" />
+  <div>
+    <dl>
+      <dt>
+        <label for="myDoc">Create a new Space from a Page</label>
+        <span class="xHint">Start typing the name of the page you want to make into a space</span>
+      </dt>
+      <dd>
+        <input type="text" name="document" id="document" value="Space of Page" class="suggestDocuments withTip" />
+      </dd>
+    </dl>
+    <dl>
+      <dt>
+        <label for="mySpaceName">New Space Name</label>
+        <span class="xHint">Enter the name for the new space you would like to create</span>
+      </dt>
+      <dd>
+        <input type="text" name="spname" id="spname" value="New Space Name" class="withTip" />
+      </dd>
+    </dl>
+  </div>
+  <div class="buttons">
+   <span class="buttonwrapper">
+     <input type="submit" class="button" value="Create Space" />
+   </span>
+ </div>
+</form>
+{{/html}}
+{{/velocity}}
