@@ -1,0 +1,126 @@
+{{info}}This macro will move an App Within Minutes to a new wiki.{{/info}}
+
+{{velocity}}
+{{html wiki='true'}}
+<form method="get" class="xform" action="$doc.getURL('view')">
+  <input type="hidden" name="action" value="moveApp" />
+  <div>
+    <dl>
+      <dt>
+        <label>Select the App Within Minutes to Move</label>
+        <span class="xHint">Choose from the list of apps below</span>
+      </dt>
+      <dd>
+        <select size="1" name="app" style="width:auto">
+        	<option></option>
+        #foreach($app in $xwiki.searchDocuments(",BaseObject as obj where doc.fullName=obj.name and obj.className='AppWithinMinutes.LiveTableClass' order by doc.fullName"))
+			#set($appdoc = $xwiki.getDocument($app))
+			<option>$appdoc.space</option>
+		#end
+        </select>
+      </dd>
+    </dl>
+    <dl>
+      <dt>
+        <label>Target Wiki</label>
+        <span class="xHint">Choose from the list of wikis below</span>
+      </dt>
+      <dd>
+        <select size="1" name="wiki" style="width:auto">
+        #foreach($wiki in $services.wiki.getAll())
+          #if($wiki.id != $doc.wiki)
+           <option value="$wiki.id" >$wiki.id</option>
+          #end
+        #end
+        </select>
+      </dd>
+    </dl>
+  </div>
+{{warning}}
+WARNING! This macro will move the selected App Within Minutes to the wiki specified above. Please make certain the information above is correct before continuing.
+{{/warning}}
+  <div class="buttons" style="margin:20px 0;">
+   <span class="buttonwrapper">
+     <input type="submit" class="button" value="Move App" />
+   </span>
+ </div>
+</form>
+{{/html}}
+
+#if($request.action == 'moveApp' && $request.app != "")
+	#set ($noSpaceName = $request.app.replaceAll(" +",""))
+	#set ($appDocs = ["${noSpaceName}Class", "${noSpaceName}Sheet", "${noSpaceName}Template", "${noSpaceName}LiveTableResults", "${noSpaceName}Translations"])
+	#foreach($item in $appDocs)
+		#set ($fromReference = $services.model.createDocumentReference("", $request.app, $item))
+		#set ($toReference = $services.model.createDocumentReference($request.wiki, $request.app, $item))
+		* Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+		#set ($ok = $xwiki.getDocument($fromReference).rename($toReference))
+	#end
+	#foreach($item in $xwiki.getSpaceDocsName($request.app))
+		#set ($fromReference = $services.model.createDocumentReference("", $request.app, $item))
+		#set ($toReference = $services.model.createDocumentReference($request.wiki, $request.app, $item))
+		* Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+		#set($ok = $xwiki.getDocument($fromReference).rename($toReference))
+	#end
+#end
+{{/velocity}}
+
+## manually enter app for migration of hidden documents
+{{velocity}}
+{{html wiki='true'}}
+<form method="get" class="xform" action="$doc.getURL('view')">
+  <input type="hidden" name="action" value="manualMoveApp" />
+  <div>
+    <dl>
+      <dt>
+        <label>Name of App Within Minutes to Move</label>
+        <span class="xHint">Enter the full space name for the app you would like to move</span>
+      </dt>
+      <dd>
+        <input type="text" name="app" value=""/>
+      </dd>
+    </dl>
+    <dl>
+      <dt>
+        <label>Target Wiki</label>
+        <span class="xHint">Choose from the list of wikis below</span>
+      </dt>
+      <dd>
+        <select size="1" name="wiki" style="width:auto">
+        #foreach($wiki in $services.wiki.getAll())
+          #if($wiki.id != $doc.wiki)
+           <option value="$wiki.id" >$wiki.id</option>
+          #end
+        #end
+        </select>
+      </dd>
+    </dl>
+  </div>
+{{warning}}
+WARNING! This macro will move the selected App Within Minutes to the wiki specified above. Please make certain the information above is correct before continuing.
+{{/warning}}
+  <div class="buttons" style="margin:20px 0;">
+   <span class="buttonwrapper">
+     <input type="submit" class="button" value="Move App" />
+   </span>
+ </div>
+</form>
+{{/html}}
+
+#if($request.action == 'manualMoveApp' && $request.app != "")
+	#set ($noSpaceName = $request.app.replaceAll(" +",""))
+	#set ($appDocs = ["${noSpaceName}Class", "${noSpaceName}Sheet", "${noSpaceName}Template", "${noSpaceName}LiveTableResults", "${noSpaceName}Translations"])
+	#foreach($item in $appDocs)
+		#set ($fromReference = $services.model.createDocumentReference("", $request.app, $item))
+		#set ($toReference = $services.model.createDocumentReference($request.wiki, $request.app, $item))
+		* Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+		#set ($ok = $xwiki.getDocument($fromReference).rename($toReference))
+	#end
+  #foreach($item in $xwiki.getSpaceDocsName($request.app))
+    #set ($fromReference = $services.model.createDocumentReference("", $request.app, $item))
+    #set ($toReference = $services.model.createDocumentReference($request.wiki, $request.app, $item))
+    * Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+    #set($ok = $xwiki.getDocument($fromReference).rename($toReference))
+  #end
+#end
+{{/velocity}}

@@ -22,7 +22,7 @@
 #macro (sortXWikiObjectsList $inputObjects $propertyName $outputObjects)
   #set ($objectsMap = {})
   #foreach ($object in $inputObjects)
-    #set ($key = $object.getProperty($propertyName).value)
+    #set ($key = $object.getProperty($propertyName).getValue())
     #set ($sameKeyObjects = $objectsMap.get($key))
     #if (!$sameKeyObjects)
       #set ($sameKeyObjects = [])
@@ -45,9 +45,9 @@
  *#
 #macro (getListFromDoc $docName $sortedList)
   #set ($myDoc = $xwiki.getDocument($docName))
-  #set ($assessments =$myDoc.getObjects('Navbar.MenuItemClass'))
+  #set ($assessments =$myDoc.getObjects('xwiki:Navbar.MenuItemClass'))
   #set ($myMap = {})
-    #foreach ($ass in $assessments)
+  #foreach ($ass in $assessments)
     #set ($myKey = $ass.getProperty('projectHome').getValue())
     #set ($sameKeyObjects = $myMap.get($myKey))
     #if (!$sameKeyObjects)
@@ -68,29 +68,33 @@
  * @param navbarPage the page which holds the ordered navbar list items
  *#
 #macro(createDropdown $prog $progHome $progForum $navbarPage)
-  #if($xwiki.hasAccessLevel("view",$xcontext.user, "${progForum}.WebHome") || $progForum == "")
+  #if($xwiki.hasAccessLevel("view",$xcontext.user, $progForum) || $progForum == "")
     <li class="dropdown">
-      #if($xwiki.hasAccessLevel("view",$xcontext.user, "${progHome}.WebHome"))
+      #if($xwiki.hasAccessLevel("view",$xcontext.user, $progHome))
         <a href="#" class="dropdown-toggle" data-toggle="dropdown">$prog <b class="caret"></b></a>
         <ul class="dropdown-menu">
-          <li><a href="$xwiki.getURL("${progHome}.WebHome")">$xwiki.getDocument("${progHome}.WebHome").displayTitle</a></li>
-          <li class="divider"></li>
-          <li role="presentation" class="dropdown-header">Projects</li>
           #set($myList = [])
           #getListFromDoc($navbarPage $myList)
           #foreach($item in $myList)
-            #set($itemDoc = $xwiki.getDocument($item.getProperty('projectHome').getValue()))
-            <li><a href="$xwiki.getURL($itemDoc)">$itemDoc.displayTitle</a></li>
+          	#set($entry = $item.getProperty('projectHome').getValue())
+          	#if($xwiki.exists($entry))
+	            #set($itemDoc = $xwiki.getDocument($entry))
+	            <li><a href="$xwiki.getURL($entry)">$itemDoc.displayTitle</a></li>
+	        #elseif($entry == "divider")
+	        	<li class="divider"></li>
+        	#else
+        		<li role="presentation" class="dropdown-header">$entry</li>
+        	#end
           #end
           #if($progForum != "")
             <li class="divider"></li>
-            <li><a href="$xwiki.getURL("${progForum}.WebHome")">$prog Forum</a></li>
+            <li><a href="$xwiki.getURL($progForum)">$prog Forum</a></li>
           #end
         </ul>
       #elseif($progForum != "") ## Can view forum but not program, and forum exists
         <a href="#" class="dropdown-toggle" data-toggle="dropdown">$progForum <b class="caret"></b></a>
         <ul class="dropdown-menu">   
-          <li><a href="$xwiki.getURL("${progForum}.WebHome")">$progHome Forum</a></li>
+          <li><a href="$xwiki.getURL($progForum)">$progHome Forum</a></li>
           <li class="divider"></li>
           <li role="presentation" class="dropdown-header">Topics</li>
           #spaceChildren($progForum)
@@ -113,10 +117,17 @@
           #set($myList = [])
           #getListFromDoc($navbarPage $myList)
           #foreach($item in $myList)
-            #set($itemDoc = $xwiki.getDocument($item.getProperty('projectHome').getValue()))
-            #if($xwiki.hasAccessLevel("view",$xcontext.user, $itemDoc))
-              <li><a href="$xwiki.getURL($itemDoc)">$itemDoc.displayTitle</a></li>
-            #end
+            #set($entry = $item.getProperty('projectHome').getValue())
+            #if($xwiki.exists($entry))
+	            #set($itemDoc = $xwiki.getDocument($entry))
+	            #if($xwiki.hasAccessLevel("view",$xcontext.user, $itemDoc))
+	              <li><a href="$xwiki.getURL($entry)">$itemDoc.displayTitle</a></li>
+	            #end
+	        #elseif($entry == "divider")
+	        	<li class="divider"></li>
+        	#else
+        		<li role="presentation" class="dropdown-header">$entry</li>
+        	#end
           #end
         </ul>
     </li>  
@@ -125,8 +136,8 @@
 
 ## Get Avatar ----------------------
 
-#set($profileDoc = $xwiki.getDocument($context.localUser))
-#set($profileObj = $profileDoc.getObject('XWiki.XWikiUsers'))
+#set($profileDoc = $xwiki.getDocument("xwiki:${context.localUser}"))
+#set($profileObj = $profileDoc.getObject('xwiki:XWiki.XWikiUsers'))
 #set($pictname = $profileObj.getProperty('avatar').value)
 #if("$!{pictname}" != '')
   #set($picturl = $profileDoc.getAttachmentURL($pictname))
@@ -157,10 +168,10 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        #createDropdown("GCCS-J" "GCCS-J Systems Engineering Support" "GCCS-J Stakeholders" "Navbar.GCCS-J")
-        #createDropdown("JOPES" "JOPES Modernization" "JOPES Stakeholders" "Navbar.JOPES")
-        #createDropdown("Shah &amp; Shah" "Shah-Shah" "" "Navbar.Shah_Shah")
-        #createCorporateDropdown($navbarPage)
+        #createDropdown("GCCS-J" "xwiki:GCCS-J Systems Engineering Support.WebHome" "xwiki:GCCS-J Stakeholders.WebHome" "xwiki:Navbar.GCCS-J")
+        #createDropdown("JOPES" "jopes:JOPES Modernization.WebHome" "jopes:JOPES Stakeholders.WebHome" "xwiki:Navbar.JOPES")
+        #createDropdown("Shah &amp; Shah" "xwiki:Shah-Shah.WebHome" "" "xwiki:Navbar.Shah_Shah")
+        #createCorporateDropdown("xwiki:Navbar.Corporate")
       </ul>
       
       ################### Navbar Right Begin ##################
