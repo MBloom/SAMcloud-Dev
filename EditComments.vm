@@ -1,0 +1,49 @@
+{{velocity}}
+{{html wiki='true'}}
+<form method="get" class="xform" action="$doc.getURL('view')">
+  <input type="hidden" name="action" value="getComments" />
+  <div>
+    <dl>
+      <dt>
+        <label>Select Space</label>
+        <span class="xHint">Choose from the list of spaces below</span>
+      </dt>
+      <dd>
+        <select size="1" name="space" style="width:auto">
+        #foreach($space in $xwiki.spaces)
+           <option value="$space" >$space</option>
+        #end
+        </select>
+      </dd>
+    </dl>
+  </div>
+  <div class="buttons" style="margin:20px 0;">
+   <span class="buttonwrapper">
+     <input type="submit" class="button" value="Get Comments" />
+   </span>
+ </div>
+</form>
+{{/html}}
+
+#if($request.action == 'getComments')
+== Pages With Comments ==
+  #foreach($item in $xwiki.getSpaceDocsName($request.space))
+    #set ($docReference = $services.model.createDocumentReference("", $request.space, $item))
+    #set ($myDoc = $xwiki.getDocument($docReference))
+    #if($myDoc.getComments().size() > 0)    
+      * [[$myDoc.displayTitle>>$myDoc]]
+      ** $myDoc.getComments().size() total comments
+      **The following are the authors that were changed:**
+      #foreach($object in $myDoc.getComments())
+        #set($oldAuthor = $object.getProperty('author').getValue().toString())
+        #if($oldAuthor.substring(0,6) != "xwiki:")
+          #set($newAuthor = "xwiki:"+$oldAuthor)
+          $newAuthor
+          #set($ok = $object.set('author', $newAuthor))
+        #end
+      #end
+    #end
+    #set($ok = $myDoc.save())
+  #end
+#end
+{{/velocity}}

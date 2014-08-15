@@ -60,6 +60,8 @@
   	#set($navbarPage = $primaryPage)
   #elseif($xwiki.hasAccessLevel("view",$xcontext.user, $secondaryPage))
   	#set ($navbarPage = $secondaryPage)
+  #else
+  	#break
   #end
 	<li class="dropdown">
 	    <a href="#" class="dropdown-toggle" data-toggle="dropdown">$prog <b class="caret"></b></a>

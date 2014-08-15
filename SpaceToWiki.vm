@@ -1,10 +1,16 @@
 {{velocity}}
 #if($request.action == 'moveSpace')
   #foreach($item in $xwiki.getSpaceDocsName($request.space))
-    #set ($fromReference = $services.model.createDocumentReference("", $request.space, $item))
-    #set ($toReference = $services.model.createDocumentReference($request.wiki, $request.space, $item))
-    * Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
-    #set($ok = $xwiki.getDocument($fromReference).rename($toReference))
+    #if($item != "WebPreferences")
+      #set ($fromReference = $services.model.createDocumentReference("", $request.space, $item))
+      #set ($toReference = $services.model.createDocumentReference($request.wiki, $request.space, $item))
+      * Moved "$services.model.serialize($fromReference)" to "$services.model.serialize($toReference)"
+      #set($ok = $xwiki.getDocument($fromReference).rename($toReference))
+    #else
+      #set ($webPrefRef = $services.model.createDocumentReference("", $request.space, $item))
+      * ==DELETED "$services.model.serialize($webPrefRef)"==
+      #set($ok = $xwiki.getDocument($webPrefRef).delete())
+    #end
   #end
 #end
 
