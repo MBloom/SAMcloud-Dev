@@ -58,7 +58,7 @@
 #macro(createDropdown $prog $primaryPage $secondaryPage)
   #if($xwiki.hasAccessLevel("view",$xcontext.user, $primaryPage))
   	#set($navbarPage = $primaryPage)
-  #elseif($xwiki.hasAccessLevel("view",$xcontext.user, $secondaryPage))
+  #elseif($secondaryPage && $xwiki.hasAccessLevel("view",$xcontext.user, $secondaryPage))
   	#set ($navbarPage = $secondaryPage)
   #else
   	#break
@@ -72,14 +72,14 @@
 	      	#set($entry = $item.getProperty('projectHome').getValue())
 	      	#if($xwiki.exists($entry))
 	            #set($itemDoc = $xwiki.getDocument($entry))
-	            #if($xwiki.hasAccessLevel("view",$xcontext.user, $itemDoc))
+	            #if($xwiki.hasAccessLevel("view",$xcontext.user, $entry))
 	              <li><a href="$xwiki.getURL($entry)">$itemDoc.displayTitle</a></li>
 	            #end
 	        #elseif($entry == "divider")
 	        	<li class="divider"></li>
-	    	#else
-	    		<li role="presentation" class="dropdown-header">$entry</li>
-	    	#end
+  	    	#else
+  	    		<li role="presentation" class="dropdown-header">$entry</li>
+  	    	#end
 	      #end
 	    </ul>
 	</li>  

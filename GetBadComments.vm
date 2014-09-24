@@ -1,0 +1,32 @@
+{{velocity}}
+{{html wiki='true'}}
+<form method="get" class="xform" action="$doc.getURL('view')">
+	<input type="hidden" name="action" value="run" />
+	<div class="buttons" style="margin:20px 0;">
+	<span class="buttonwrapper">
+		<input type="submit" class="button" value="Go" />
+	</span>
+	</div>
+</form>
+{{/html}}
+
+#if($request.action == 'run')
+== Pages with Bad Comment Authors ==
+	#foreach($space in $xwiki.spaces)
+		#foreach($item in $xwiki.getSpaceDocsName($space))
+			#set ($docReference = $services.model.createDocumentReference("", $space, $item))
+			#set ($myDoc = $xwiki.getDocument($docReference))
+			#if($myDoc.getComments().size() > 0)
+				#foreach($object in $myDoc.getComments())
+					#set($oldAuthor = $object.getProperty('author').getValue().toString())
+					#if($oldAuthor.substring(0,6) != "xwiki:")
+						$space
+						#break
+					#end
+				#end
+				#break
+			#end
+		#end
+	#end
+#end
+{{/velocity}}
